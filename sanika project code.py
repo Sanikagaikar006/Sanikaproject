@@ -49,7 +49,7 @@ database = {
 cart = []
 
 root = tk.Tk()
-root.title("NETTECH CAFE AND SNACKS")
+root.title("SANIKA CAFE AND SNACKS")
 root.geometry("960x650")
 root.configure(bg="#f4f6f7")
 
@@ -191,5 +191,6 @@ ttk.Button(btn_frame, text="🚪 Exit", command=exit_app).grid(row=0, column=2, 
 
 # Initialize item list on load
 update_item_list()
+
 
 root.mainloop()
