@@ -1,11 +1,110 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
-from PIL import Image, ImageTk
-import time
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sanika Cafe and Snacks</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f4f6f7;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      background-color: #5dade2;
+      color: white;
+      padding: 10px;
+      text-align: center;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+    label {
+      margin-right: 10px;
+    }
+    select, input {
+      padding: 5px;
+      margin-right: 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #bbb;
+      text-align: center;
+    }
+    .totals {
+      margin-top: 20px;
+    }
+    .totals div {
+      margin: 5px 0;
+    }
+    .btn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <h1>☕ SANIKA CAFE AND SNACKS 🍔</h1>
+  <div class="container">
+    <div>
+      <label>Category:</label>
+      <select id="category" onchange="updateItems()">
+        <option value="Veg">Veg</option>
+        <option value="Non-Veg">Non-Veg</option>
+        <option value="Beverages">Beverages</option>
+      </select>
 
-# Updated categorized database
-database = {
-    "Veg": {
+      <label>Item:</label>
+      <select id="item" onchange="updatePrice()"></select>
+
+      <label>Qty:</label>
+      <input type="number" id="qty" min="1" value="1">
+
+      <label>Price:</label>
+      <span id="price">₹0</span>
+
+      <button class="btn" onclick="addToCart()">➕ Add to Cart</button>
+    </div>
+
+    <table id="cart">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>Rate</th>
+          <th>Total</th>
+          <th>Remove</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="totals">
+      <div>Subtotal: <span id="subtotal">₹0</span></div>
+      <div>Discount (10%): <span id="discount">₹0</span></div>
+      <div>Tax (5%): <span id="tax">₹0</span></div>
+      <div><strong>Total: <span id="total">₹0</span></strong></div>
+    </div>
+
+    <button class="btn" onclick="printBill()">🖨 Print Bill</button>
+  </div>
+
+  <script>
+    const database = {
+      "Veg": {
         "Coffee": 40,
         "Tea": 20,
         "Burger": 90,
@@ -24,8 +123,8 @@ database = {
         "Garlic Bread": 45,
         "Dosa": 60,
         "Idli": 30
-    },
-    "Non-Veg": {
+      },
+      "Non-Veg": {
         "Chicken Burger": 110,
         "Chicken Pizza": 140,
         "Egg Roll": 40,
@@ -34,8 +133,8 @@ database = {
         "Chicken Nuggets": 80,
         "Grilled Chicken Sandwich": 75,
         "Butter Chicken Roll": 85
-    },
-    "Beverages": {
+      },
+      "Beverages": {
         "Cold Drink": 25,
         "Lassi": 30,
         "Buttermilk": 20,
@@ -43,154 +142,98 @@ database = {
         "Milkshake": 50,
         "Iced Tea": 35,
         "Cold Coffee": 45
+      }
+    };
+
+    let cart = [];
+
+    function updateItems() {
+      const category = document.getElementById("category").value;
+      const items = Object.keys(database[category]);
+      const itemSelect = document.getElementById("item");
+      itemSelect.innerHTML = "";
+      items.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.textContent = item;
+        itemSelect.appendChild(opt);
+      });
+      updatePrice();
     }
-}
 
-cart = []
+    function updatePrice() {
+      const category = document.getElementById("category").value;
+      const item = document.getElementById("item").value;
+      const price = database[category][item];
+      document.getElementById("price").textContent = "₹" + price;
+    }
 
-root = tk.Tk()
-root.title("SANIKA CAFE AND SNACKS")
-root.geometry("960x650")
-root.configure(bg="#f4f6f7")
+    function addToCart() {
+      const category = document.getElementById("category").value;
+      const item = document.getElementById("item").value;
+      const qty = parseInt(document.getElementById("qty").value);
+      const price = database[category][item];
+      const total = qty * price;
 
-unit_price_var = tk.StringVar(value="\u20b90")
-category_var = tk.StringVar(value="Veg")
+      cart.push({ item, qty, price, total });
+      renderCart();
+    }
 
-# Helper to update item list based on category
-def update_item_list(*args):
-    items = list(database[category_var.get()].keys())
-    item_combo.config(values=items)
-    if items:
-        item_combo.set(items[0])
-        update_unit_price()
+    function renderCart() {
+      const tbody = document.querySelector("#cart tbody");
+      tbody.innerHTML = "";
 
-# Update unit price when item selected
-def update_unit_price(event=None):
-    item = item_combo.get()
-    price = database[category_var.get()].get(item, 0)
-    unit_price_var.set(f"\u20b9{price}")
+      let subtotal = 0;
 
-# Add item to cart
-def add_to_cart():
-    category = category_var.get()
-    item = item_combo.get()
-    qty = int(qty_spinbox.get())
-    price = database[category][item]
-    total = price * qty
-    cart.append((item, qty, price, total))
-    cart_tree.insert('', 'end', values=(item, qty, f"\u20b9{price}", f"\u20b9{total}"))
-    update_totals()
+      cart.forEach((entry, index) => {
+        subtotal += entry.total;
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${entry.item}</td>
+          <td>${entry.qty}</td>
+          <td>₹${entry.price}</td>
+          <td>₹${entry.total}</td>
+          <td><button onclick="removeItem(${index})">❌</button></td>
+        `;
+        tbody.appendChild(row);
+      });
 
-# Remove selected items
-def remove_selected():
-    for selected in cart_tree.selection():
-        vals = cart_tree.item(selected, "values")
-        cart.remove((vals[0], int(vals[1]), int(vals[2][1:]), int(vals[3][1:])))
-        cart_tree.delete(selected)
-    update_totals()
+      const discount = +(subtotal * 0.10).toFixed(2);
+      const tax = +((subtotal - discount) * 0.05).toFixed(2);
+      const total = +(subtotal - discount + tax).toFixed(2);
 
-# Clear cart
-def clear_cart():
-    cart.clear()
-    cart_tree.delete(*cart_tree.get_children())
-    update_totals()
+      document.getElementById("subtotal").textContent = "₹" + subtotal;
+      document.getElementById("discount").textContent = "₹" + discount;
+      document.getElementById("tax").textContent = "₹" + tax;
+      document.getElementById("total").textContent = "₹" + total;
+    }
 
-# Update billing totals
-def update_totals():
-    subtotal = sum(item[3] for item in cart)
-    discount = round(subtotal * 0.10, 2)
-    tax = round((subtotal - discount) * 0.05, 2)
-    total = round(subtotal - discount + tax, 2)
-    subtotal_var.set(f"\u20b9{subtotal}")
-    discount_var.set(f"\u20b9{discount}")
-    tax_var.set(f"\u20b9{tax}")
-    total_var.set(f"\u20b9{total}")
+    function removeItem(index) {
+      cart.splice(index, 1);
+      renderCart();
+    }
 
-# Print bill
-def print_bill():
-    if not cart:
-        messagebox.showwarning("Empty", "Cart is empty!")
-        return
-    bill = "\nNETTECH CAFE AND SNACKS\n" + "="*30 + "\n"
-    for item, qty, price, total in cart:
-        bill += f"{item} x{qty} @\u20b9{price} = \u20b9{total}\n"
-    bill += "="*30 + f"\nSubtotal: {subtotal_var.get()}\nDiscount: {discount_var.get()}\nTax: {tax_var.get()}\nTotal: {total_var.get()}"
-    messagebox.showinfo("Your Bill", bill)
+    function printBill() {
+      if (cart.length === 0) {
+        alert("Cart is empty!");
+        return;
+      }
 
-def update_time():
-    clock_label.config(text="🕒 " + time.strftime("%H:%M:%S"))
-    root.after(1000, update_time)
+      let bill = "SANIKA CAFE AND SNACKS\n===========================\n";
+      cart.forEach(item => {
+        bill += `${item.item} x${item.qty} @ ₹${item.price} = ₹${item.total}\n`;
+      });
+      bill += "===========================\n";
+      bill += `Subtotal: ${document.getElementById("subtotal").textContent}\n`;
+      bill += `Discount: ${document.getElementById("discount").textContent}\n`;
+      bill += `Tax: ${document.getElementById("tax").textContent}\n`;
+      bill += `Total: ${document.getElementById("total").textContent}\n`;
+      alert(bill);
+    }
 
-def exit_app():
-    root.destroy()
+    // Load initial items
+    updateItems();
+  </script>
+</body>
+</html>
 
-# Header
-tk.Label(root, text="☕ SANIKA CAFE AND SNACKS 🍔", font=("Times New Roman", 24, "bold"), fg="#ffffff", bg="#5dade2").pack(fill="x")
-
-# Clock
-clock_label = tk.Label(root, font=("Times New Roman", 12, "bold"), bg="#fef9e7")
-clock_label.pack(fill="x")
-update_time()
-
-# Selection Frame
-sel_frame = tk.LabelFrame(root, text="🍽 Select Category & Item", font=("Times New Roman", 12, "bold"), bg="#e8f8f5")
-sel_frame.pack(fill="x", padx=20, pady=10)
-
-ttk.Label(sel_frame, text="Category:", font=("Times New Roman", 11), background="#e8f8f5").grid(row=0, column=0, padx=5)
-category_combo = ttk.Combobox(sel_frame, values=list(database.keys()), textvariable=category_var, state="readonly", font=("Times New Roman", 11))
-category_combo.grid(row=0, column=1, padx=5)
-category_combo.bind("<<ComboboxSelected>>", update_item_list)
-
-item_combo = ttk.Combobox(sel_frame, font=("Times New Roman", 11), state="readonly")
-item_combo.grid(row=0, column=2, padx=5)
-item_combo.bind("<<ComboboxSelected>>", update_unit_price)
-
-qty_spinbox = tk.Spinbox(sel_frame, from_=1, to=10, width=5, font=("Times New Roman", 11))
-qty_spinbox.grid(row=0, column=3, padx=5)
-
-tk.Label(sel_frame, textvariable=unit_price_var, font=("Times New Roman", 11, "bold"), bg="#e8f8f5").grid(row=0, column=4, padx=5)
-
-ttk.Button(sel_frame, text="➕ Add to Cart", command=add_to_cart).grid(row=0, column=5, padx=5)
-ttk.Button(sel_frame, text="🗑 Remove Selected", command=remove_selected).grid(row=0, column=6, padx=5)
-
-# Cart Tree
-cart_frame = tk.LabelFrame(root, text="🛒 Cart Items", font=("Times New Roman", 12, "bold"), bg="#f0f3f4")
-cart_frame.pack(fill="both", expand=True, padx=20, pady=10)
-
-cart_tree = ttk.Treeview(cart_frame, columns=("Item", "Qty", "Rate", "Total"), show="headings")
-for col in ("Item", "Qty", "Rate", "Total"):
-    cart_tree.heading(col, text=col)
-    cart_tree.column(col, anchor="center")
-cart_tree.pack(fill="both", expand=True)
-
-# Billing section
-totals_frame = tk.LabelFrame(root, text="💰 Billing", font=("Times New Roman", 12, "bold"), bg="#f4f6f7")
-totals_frame.pack(fill="x", padx=20, pady=10)
-
-subtotal_var = tk.StringVar(value="\u20b90")
-discount_var = tk.StringVar(value="\u20b90")
-tax_var = tk.StringVar(value="\u20b90")
-total_var = tk.StringVar(value="\u20b90")
-
-for i, (label, var) in enumerate([
-    ("Subtotal", subtotal_var),
-    ("Discount (10%)", discount_var),
-    ("Tax (5%)", tax_var),
-    ("Total", total_var)
-]):
-    tk.Label(totals_frame, text=label+":", font=("Times New Roman", 11), bg="#f4f6f7").grid(row=i, column=0, sticky="e", padx=10)
-    tk.Label(totals_frame, textvariable=var, font=("Times New Roman", 11), fg="green", bg="#f4f6f7").grid(row=i, column=1, sticky="w", padx=5)
-
-# Action Buttons
-btn_frame = tk.Frame(root, bg="#f4f6f7")
-btn_frame.pack(pady=10)
-
-ttk.Button(btn_frame, text="🧹 Clear Cart", command=clear_cart).grid(row=0, column=0, padx=15)
-ttk.Button(btn_frame, text="🖨 Print Bill", command=print_bill).grid(row=0, column=1, padx=15)
-ttk.Button(btn_frame, text="🚪 Exit", command=exit_app).grid(row=0, column=2, padx=15)
-
-# Initialize item list on load
-update_item_list()
-
-
-root.mainloop()
